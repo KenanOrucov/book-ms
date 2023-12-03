@@ -1,0 +1,11 @@
+jwt:
+  secret: SGVsbG8gbXkgbmFtZSBpcyBLYW5hbi4gVGhpcyBpcyBteSBzZWN1cml0eSBzZWNyZXQuIElmIHlvdSBjYW4gZW5jeXJwdGUgaXQsIGkgZG9uJ3QgaGF2ZSBhbnkgd29yZC4gVGVhY2ggbWUsIHdlIGJyZWFrIGV2ZXJ5b25lJ3MgdG9nZXRoZXI=
+  access-token:
+    expiration: 600000 # 3 minutes 180000
+  refresh-token:
+    expiration: 3000000 # 5 minutes
+
+security:
+  jwtProperties:
+    secret: ${APP_SECRET_KEY:SGVsbG8gbXkgbmFtZSBpcyBLYW5hbi4gVGhpcyBpcyBteSBzZWN1cml0eSBzZWNyZXQuIElmIHlvdSBjYW4gZW5jeXJwdGUgaXQsIGkgZG9uJ3QgaGF2ZSBhbnkgd29yZC4gVGVhY2ggbWUsIHdlIGJyZWFrIGV2ZXJ5b25lJ3MgdG9nZXRoZXI=}
+

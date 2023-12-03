@@ -1,0 +1,4 @@
+rootProject.name = 'book-ms'
+
+include 'book-management-ms'
+include 'user-management-ms'

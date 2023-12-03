@@ -1,0 +1,8 @@
+spring:
+  profiles:
+    include:
+      - db
+      - common
+      - security
+server:
+  port: 8081
