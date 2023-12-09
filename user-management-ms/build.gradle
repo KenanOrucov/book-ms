@@ -1,8 +1,33 @@
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import com.bmuschko.gradle.docker.tasks.image.Dockerfile
+
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '2.7.1'
-    id 'io.spring.dependency-management' version '1.1.3'
+    id 'org.springframework.boot' version '3.2.0'
+//    id 'io.spring.dependency-management' version '1.1.4'
     id "io.freefair.lombok" version "6.5.0-rc1"
+    id 'com.bmuschko.docker-remote-api' version "$dockerVersion"
+}
+apply plugin: 'io.spring.dependency-management'
+
+
+bootJar {
+    archiveBaseName.set(project.name)
+}
+
+jar {
+//    manifest {
+//        attributes 'Main-Class': 'com.example.usermanagementms.UserManagementMsApplication'
+//    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes "Main-Class": "com.example.usermanagementms.UserManagementMsApplication"
+    }
+
+    from {
+        configurations.runtimeClasspath.collect {it.isDirectory() ? it : zipTree(it)}
+    }
 }
 
 group = 'com.example'
@@ -12,6 +37,12 @@ java {
     sourceCompatibility = '17'
 }
 
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
 repositories {
     mavenCentral()
 }
@@ -19,25 +50,61 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    implementation "org.modelmapper:modelmapper:$modelmapperVersion"
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation "org.modelmapper:modelmapper:${modelmapperVersion}"
+
 
     implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     implementation "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
 
-
-    compileOnly "org.mapstruct:mapstruct:$mapStructVersion"
-    annotationProcessor "org.mapstruct:mapstruct-processor:$mapStructVersion"
-
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    implementation 'mysql:mysql-connector-java:8.0.26'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    compileOnly "org.mapstruct:mapstruct:${mapStructVersion}"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapStructVersion}"
     testImplementation 'org.springframework.security:spring-security-test'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+//    runtimeOnly("mysql:mysql-connector-java:8.0.22")
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+//apply plugin: 'com.bmuschko.docker-remote-api'
+
+
+//task customJarFile(type: Jar){
+//    manifest {
+//        attributes 'Main-Class': 'com.example.usermanagementms.UserManagementMsApplication'
+//    }
+////    baseName= 'user-management-ms-0.0.1-SNAPSHOT-plain'
+//    from {configurations.compile.collect {it.isDirectory() ? it : zipTree(it)}}
+//    with jar
+//}
+
+task dockerFile(type: Dockerfile, dependsOn: assemble) {
+    destFile.set(project.file('Dockerfile'))
+    from "alpine:$alpineVersion"
+    runCommand 'apk add --no-cache openjdk17'
+    copyFile "build/libs/${jar.archiveFileName.get()}", '/app/'
+    workingDir '/app/'
+    entryPoint 'java'
+    defaultCommand '-jar', "/app/${jar.archiveFileName.get()}"
+    println "${project}"
+}
+
+task dockerBuild(type: DockerBuildImage, dependsOn: dockerFile) {
+    inputDir.set(file("$projectDir/."))
+    doLast {
+        println("creatig image: $dockerRepoUrl/${project.name}:$version")
+    }
+    images.add("$dockerRepoUrl/${project.name}:$version")
+}
+
+task dockerPush(type: DockerPushImage, dependsOn: dockerBuild) {
+    images.add("$dockerRepoUrl/${project.name}:$version")
+
+    registryCredentials.setUsername("$dockerHubUsername")
+    registryCredentials.setPassword("$dockerHubPassword")
+    registryCredentials.setEmail("$dockerHubEmail")
 }
 
 tasks.named('test') {

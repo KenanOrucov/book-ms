@@ -1,7 +1,6 @@
 package com.example.usermanagementms.exception;
 
-import com.example.usermanagementms.util.ErrorResponse;
-import org.modelmapper.ValidationException;
+import com.example.usermanagementms.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -21,13 +20,6 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
     public ErrorResponse handleException(ValidationException exception) {
-        return new ErrorResponse(exception.getMessage());
-    }
-
-    @ExceptionHandler(value = LoginException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ResponseBody
-    public ErrorResponse handleException(LoginException exception) {
         return new ErrorResponse(exception.getMessage());
     }
 }

@@ -1,4 +1,4 @@
-rootProject.name = 'book-ms'
+rootProject.name = 'book-microservice'
 
-include 'book-management-ms'
 include 'user-management-ms'
+include 'book-management-ms'

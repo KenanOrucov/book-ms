@@ -1,21 +1,38 @@
 package com.example.bookmanagementms.service;
 
+import com.example.bookmanagementms.util.SecurityProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
 import java.security.Key;
 import java.util.List;
 
-@Service
-public class JwtService {
-    Key key = Keys.hmacShaKeyFor(Decoders.BASE64.decode("SGVsbG8gbXkgbmFtZSBpcyBLYW5hbi4gVGhpcyBpcyBteSBzZWN1cml0eSBzZWNyZXQuIElmIHlvdSBjYW4gZW5jeXJwdGUgaXQsIGkgZG9uJ3QgaGF2ZSBhbnkgd29yZC4gVGVhY2ggbWUsIHdlIGJyZWFrIGV2ZXJ5b25lJ3MgdG9nZXRoZXI="));
+import static com.example.bookmanagementms.util.HttpConstants.AUTH_HEADER;
+import static com.example.bookmanagementms.util.HttpConstants.BEARER_AUTH_HEADER;
 
+@Service
+@RequiredArgsConstructor
+public class JwtService {
+    @Value("${jwt.secret}")
+    String secret;
+    private final SecurityProperties securityProperties;
+    private Key key;
+
+    @PostConstruct
+    public void init() {
+        byte[] keyBytes;
+        keyBytes = Decoders.BASE64.decode(secret);
+        key = Keys.hmacShaKeyFor(keyBytes);
+    }
     public String getSubject(){
         String token = getToken();
         Claims claims = getClaims(token);
@@ -26,7 +43,7 @@ public class JwtService {
     public boolean isAuthor(){
         String token = getToken();
         Claims claims = getClaims(token);
-        List<?> roles = claims.get("rule", List.class);
+        List<?> roles = claims.get("role", List.class);
 
         return roles.contains("AUTHOR");
     }
@@ -34,7 +51,7 @@ public class JwtService {
     public String getToken(){
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = attributes.getRequest();
-        String token = request.getHeader("Authorization").substring("Bearer".length()).trim();
+        String token = request.getHeader(AUTH_HEADER).substring(BEARER_AUTH_HEADER.length()).trim();
         return token;
     }
 

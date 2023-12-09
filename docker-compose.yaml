@@ -1,5 +1,7 @@
 version: '3.1'
 services:
+#  app:
+#    network_mode: 'host'
   db:
     image: mysql:5.7
     restart: always

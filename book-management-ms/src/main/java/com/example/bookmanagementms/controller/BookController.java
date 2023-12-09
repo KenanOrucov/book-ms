@@ -1,6 +1,5 @@
 package com.example.bookmanagementms.controller;
 
-import com.example.bookmanagementms.dto.BookDetailResponse;
 import com.example.bookmanagementms.dto.BookRequest;
 import com.example.bookmanagementms.dto.BookResponseDto;
 import com.example.bookmanagementms.service.BookService;
@@ -12,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 
 @Slf4j
 @RequiredArgsConstructor

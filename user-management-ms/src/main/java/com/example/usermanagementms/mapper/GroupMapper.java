@@ -1,8 +1,8 @@
 package com.example.usermanagementms.mapper;
 
 import com.example.usermanagementms.domain.User;
-import com.example.usermanagementms.dto.user.UserRequestDto;
-import com.example.usermanagementms.dto.user.UserResponseDto;
+import com.example.usermanagementms.dto.request.UserRequestDto;
+import com.example.usermanagementms.dto.response.UserResponseDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -14,6 +14,7 @@ import static org.mapstruct.ReportingPolicy.IGNORE;
 public interface GroupMapper {
 
     GroupMapper INSTANCE = Mappers.getMapper(GroupMapper.class);
+
 
     User convertToUser(UserRequestDto userDto);
 

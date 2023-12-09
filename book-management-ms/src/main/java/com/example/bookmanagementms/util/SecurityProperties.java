@@ -18,7 +18,6 @@ public class SecurityProperties {
     @Getter
     @Setter
     public static class JwtProperties {
-
         private String secret;
     }
 

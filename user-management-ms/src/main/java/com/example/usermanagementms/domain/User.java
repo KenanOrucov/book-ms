@@ -1,26 +1,25 @@
 package com.example.usermanagementms.domain;
 
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import javax.persistence.*;
-import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Set;
 
-import static javax.persistence.GenerationType.IDENTITY;
-import static lombok.AccessLevel.PRIVATE;
+import static com.example.usermanagementms.domain.User.TABLE_NAME;
+import static jakarta.persistence.GenerationType.IDENTITY;
 
 @Entity
-@Table(name = User.TABLE_NAME)
+@Table(name = TABLE_NAME)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Getter
 @Setter
-@FieldDefaults(level = PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @NamedEntityGraph(
         name = "User.authorities",
         attributeNodes = @NamedAttributeNode("authorities")
@@ -34,24 +33,24 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = IDENTITY)
     Long id;
+    String username;
     String firstName;
     String lastName;
-    String email;
+    Integer age;
     String password;
-    LocalDate birthDate;
     boolean isAccountNonExpired;
     boolean isAccountNonLocked;
     boolean isCredentialsNonExpired;
     boolean isEnabled;
     @OneToMany(
             fetch = FetchType.LAZY,
-           cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.REMOVE, CascadeType.PERSIST},
+            cascade = CascadeType.ALL,
             mappedBy = "user"
     )
     Set<Authority> authorities;
     @OneToMany(
             fetch = FetchType.LAZY,
-            cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.REMOVE, CascadeType.PERSIST},
+            cascade = CascadeType.ALL,
             mappedBy = "user"
     )
     Set<Token> tokens;
@@ -81,8 +80,18 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return email;
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", age=" + age +
+                ", password='" + password + '\'' +
+                ", isAccountNonExpired=" + isAccountNonExpired +
+                ", isAccountNonLocked=" + isAccountNonLocked +
+                ", isCredentialsNonExpired=" + isCredentialsNonExpired +
+                ", isEnabled=" + isEnabled +
+                '}';
     }
 }
-

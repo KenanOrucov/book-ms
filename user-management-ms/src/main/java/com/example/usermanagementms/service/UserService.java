@@ -1,64 +1,41 @@
 package com.example.usermanagementms.service;
 
 import com.example.usermanagementms.domain.*;
-import com.example.usermanagementms.dto.SignInRequest;
-import com.example.usermanagementms.dto.SignInResponse;
-import com.example.usermanagementms.dto.user.UserRequestDto;
-import com.example.usermanagementms.dto.user.UserResponseDto;
-import com.example.usermanagementms.exception.LoginException;
-import com.example.usermanagementms.mapper.GroupMapper;
+import com.example.usermanagementms.dto.request.SignInRequest;
+import com.example.usermanagementms.dto.request.UserRequestDto;
+import com.example.usermanagementms.dto.response.SignInResponse;
+import com.example.usermanagementms.dto.response.SignUpResponse;
+import com.example.usermanagementms.dto.response.UserResponseDto;
+import com.example.usermanagementms.exception.NotFoundException;
+import com.example.usermanagementms.mapper.ManualMapper;
 import com.example.usermanagementms.repository.TokenRepository;
 import com.example.usermanagementms.repository.UserRepository;
-import com.example.usermanagementms.security.JwtAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 
-@Service
+import static com.example.usermanagementms.domain.TokenType.ACCESS_TOKEN;
+import static com.example.usermanagementms.domain.TokenType.REFRESH_TOKEN;
+
 @Slf4j
+@Service
 @RequiredArgsConstructor
-public class UserService implements UserDetailsService {
-    private final GroupMapper mapper = GroupMapper.INSTANCE;
-    private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final JwtAuthService jwtAuthService;
+public class UserService {
+//    private final GroupMapper mapper = GroupMapper.INSTANCE;
+    private final PasswordEncoder passwordEncoder;
+    private final ManualMapper mapper;
+    private final JwtService jwtAuthService;
     private final TokenRepository tokenRepository;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
 
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return userRepository.findUserEntityByEmail(email);
-    }
-
-    @Transactional
-    public String saveUser(UserRequestDto userDto, Role role){
-        userDto.setPassword(passwordEncoder(userDto.getPassword()));
-        Authority authority = authorityMaker(role);
-        var user = userMaker(userDto, authority);
-        authority.setUser(user);
-        userRepository.save(user);
-        log.info("check2: {}", passwordEncoder.matches(userDto.getPassword(), user.getPassword()));
-        return "You create account successfully";
-    }
-
-    @Transactional
-    public SignInResponse authenticate(SignInRequest request, Role role) {
-        Authentication authenticationToken = new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
-        log.info("authentication: {}", authenticationToken);
-        User user = checkIfExists(request.getEmail(), request.getPassword());
-        return getSignInResponse(user, role);
-    }
 
     public List<UserResponseDto> getAll(){
         List<User> all = userRepository.findAll();
@@ -69,31 +46,76 @@ public class UserService implements UserDetailsService {
         return mapper.convertToUserResponseDto(userRepository.findById(id).get());
     }
 
+    public SignUpResponse saveUser(UserRequestDto request, Role role) {
+        Authority authority = authorityMaker(role);
+        userMaker(request, authority);
+        return SignUpResponse.builder()
+                .message("Your registration has been successfully completed.")
+                .build();
+    }
+
+    @Transactional
+    public SignInResponse authenticate(SignInRequest request, Role role) {
+        var result = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
+        log.info("authentication: {}", result);
+        User user = checkIfExists(request.getUsername(), request.getPassword());
+        return getSignInResponse(user, role);
+    }
+
     public void delete(Long id){
         userRepository.deleteById(id);
     }
 
-    private SignInResponse getSignInResponse(User user, Role role) {
-        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
-        var accessToken = tokenMaker(authentication, role);
-        var tokenEntity = Token.builder().token(accessToken).tokenType(TokenType.ACCESS_TOKEN).user(user).build();
+    private User checkIfExists(String username, String password) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Username or password is incorrect"));
 
-        tokenRepository.save(tokenEntity);
+        if (!passwordEncoder.matches(password, user.getPassword())){
+            throw new NotFoundException("Username or password is incorrect");
+        }
+        return user;
+    }
+
+    private SignInResponse getSignInResponse(User user, Role role) {
+        var accessToken = jwtAuthService.generateToken(user, role);
+        var refreshToken = jwtAuthService.generateRefreshToken(user, role);
+        revokeAllUserTokens(user);
+        saveTokens(user, accessToken, refreshToken);
 
         return SignInResponse.builder()
                 .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
     }
 
-    private User userMaker(UserRequestDto userRequestDto, Authority authority){
-        return User.builder()
-                .firstName(userRequestDto.getFirstName())
-                .lastName(userRequestDto.getLastName())
-                .email(userRequestDto.getEmail())
-                .password(passwordEncoder.encode(userRequestDto.getPassword()))
-                .authorities(Set.of(authority))
-                .birthDate(userRequestDto.getBirthDate())
+    private void saveTokens(User user, String accessToken, String refreshToken) {
+        saveUserToken(user, accessToken, ACCESS_TOKEN);
+        saveUserToken(user, refreshToken, REFRESH_TOKEN);
+    }
+
+    private void saveUserToken(User user, String jwtToken, TokenType type) {
+        var token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(type)
                 .build();
+        tokenRepository.save(token);
+    }
+
+    private void revokeAllUserTokens(User user) {
+        var validUserTokens = tokenRepository.findAllValidTokenByUser(user.getId());
+        if (validUserTokens.isEmpty())
+            return;
+        validUserTokens.forEach(token -> {
+            token.setExpired(true);
+            token.setRevoked(true);
+        });
+        tokenRepository.saveAll(validUserTokens);
     }
 
     private Authority authorityMaker(Role role){
@@ -102,33 +124,15 @@ public class UserService implements UserDetailsService {
                 .build();
     }
 
-    private String tokenMaker(Authentication authenticationToken, Role role){
-        return jwtAuthService.issueToken(authenticationToken, Duration.ofDays(1), role.name());
+    private User userMaker(UserRequestDto userRequestDto, Authority authority){
+         return userRepository.save(User.builder()
+                .username(userRequestDto.getUsername())
+                .lastName(userRequestDto.getLastName())
+                .firstName(userRequestDto.getFirstName())
+                .password(passwordEncoder.encode(userRequestDto.getPassword()))
+                .authorities(Set.of(authority))
+                .age(userRequestDto.getAge())
+                .build());
     }
-
-    private String passwordEncoder(String password){
-        String password1 = passwordEncoder.encode(password);
-        log.info("Password: {}", password1 );
-        log.info("Password check: {}", passwordEncoder.matches(password, password1));
-        return password1;
-    }
-
-    private User checkIfExists(String username, String password) {
-        User user = userRepository.findUserByEmail(username)
-                .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
-        return user;
-    }
-
-    private User checkIfExistsDemo(String username, String password) {
-        User user = userRepository.findUserByEmail(username).get();
-        log.info("check: {}", passwordEncoder.matches(password, user.getPassword()));
-
-        log.info("Password is: " + password);
-        log.info("Password is: " + user.getPassword());
-
-        return userRepository.findUserByEmailAndPassword(username, password)
-                .orElseThrow(() -> new LoginException());
-    }
-
 
 }

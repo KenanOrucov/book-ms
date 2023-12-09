@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.security.SignatureException;
 import java.sql.SQLException;
 
 import static org.springframework.http.HttpStatus.*;
@@ -37,6 +38,18 @@ public class GlobalExceptionHandler {
     @ResponseStatus(NOT_ACCEPTABLE)
     @ExceptionHandler(SQLException.class)
     public ResponseEntity<ErrorResponseTwo> sqlException(SQLException ex){
+        return ResponseEntity.status(NOT_FOUND).body(new ErrorResponseTwo(NOT_ACCEPTABLE.value(), ex.getMessage()));
+    }
+
+    @ResponseStatus(NOT_ACCEPTABLE)
+    @ExceptionHandler(SignatureException.class)
+    public ResponseEntity<ErrorResponseTwo> signatureException(SignatureException ex){
+        return ResponseEntity.status(NOT_FOUND).body(new ErrorResponseTwo(NOT_ACCEPTABLE.value(), ex.getMessage()));
+    }
+
+    @ResponseStatus(NOT_ACCEPTABLE)
+    @ExceptionHandler(AuthorCanNotUpdateBook.class)
+    public ResponseEntity<ErrorResponseTwo> authorCanNotUpdateBook(AuthorCanNotUpdateBook ex){
         return ResponseEntity.status(NOT_FOUND).body(new ErrorResponseTwo(NOT_ACCEPTABLE.value(), ex.getMessage()));
     }
 

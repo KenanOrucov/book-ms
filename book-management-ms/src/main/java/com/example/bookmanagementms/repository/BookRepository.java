@@ -2,12 +2,12 @@ package com.example.bookmanagementms.repository;
 
 import com.example.bookmanagementms.domain.BookEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
-import java.util.Set;
 
 public interface BookRepository extends JpaRepository<BookEntity, Long> {
-    List<BookEntity> findBookEntitiesByName(String name);
+    @Query("select b from BookEntity b where b.name= :name")
+    List<BookEntity> findByName(String name);
     List<BookEntity> findBookEntitiesByAuthor(String author);
-//    Set<BookEntity> findBookEntitiesByAuthor(AuthorEntity author);
 }

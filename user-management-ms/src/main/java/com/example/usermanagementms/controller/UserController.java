@@ -1,11 +1,11 @@
 package com.example.usermanagementms.controller;
 
 import com.example.usermanagementms.domain.Role;
-import com.example.usermanagementms.domain.User;
-import com.example.usermanagementms.dto.SignInRequest;
-import com.example.usermanagementms.dto.SignInResponse;
-import com.example.usermanagementms.dto.user.UserRequestDto;
-import com.example.usermanagementms.dto.user.UserResponseDto;
+import com.example.usermanagementms.dto.request.SignInRequest;
+import com.example.usermanagementms.dto.request.UserRequestDto;
+import com.example.usermanagementms.dto.response.SignInResponse;
+import com.example.usermanagementms.dto.response.SignUpResponse;
+import com.example.usermanagementms.dto.response.UserResponseDto;
 import com.example.usermanagementms.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,14 +21,14 @@ public class UserController {
 
 
     @PostMapping("/register/user")
-    public String registerUser(
+    public SignUpResponse registerUser(
             @RequestBody UserRequestDto request
     ) {
         return userService.saveUser(request, Role.USER);
     }
 
     @PostMapping("/register/author")
-    public String registerAuthor(
+    public SignUpResponse registerAuthor(
             @RequestBody UserRequestDto request
     ) {
         return userService.saveUser(request, Role.AUTHOR);
